@@ -9,6 +9,8 @@ overviewData(pml.data.training.complete)
 pml.data.testing = loadCleanPmlData("testing")
 overviewData(pml.data.testing)
 
+getColMissingRatio(pml.data.training.complete)
+
 #Get only predictor features 
 predictorCols = getPredictorFeatures(pml.data.training.complete, pml.data.testing)
 pml.data.training.raw = pml.data.training.complete[, predictorCols]
