@@ -150,7 +150,8 @@ roll_belt, pitch_belt, yaw_belt, total_accel_belt, gyros_belt_x, gyros_belt_y, g
 <div id="data-splitting" class="section level2">
 <h2>Data splitting</h2>
 <p>The training dataset is then split into training data set (75%) and validation data set (25%) for measuring accuracy and cross validation. Testing data set is set aside for final prediction use only.</p>
-<pre class="r"><code>inTrain = createDataPartition(pml.data.training.raw$classe,
+<pre class="r"><code>set.seed(32455) #for reproduction
+inTrain = createDataPartition(pml.data.training.raw$classe,
                               p = 3 / 4,
                               list = FALSE)
 pml.data.training = pml.data.training.raw[inTrain, ]
