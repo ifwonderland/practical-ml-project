@@ -1,0 +1,180 @@
+---
+title: "week4-project"
+author: "Shaochen Huang"
+date: "1/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Problem 
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+
+## Executive summary
+
+
+
+## Detailed analysis
+
+## Data loading, cleaning and transformation
+
+First, let's load the data, and clean or transform if needed. 
+```{r data-laoding}
+naStrings = na.strings = c("NA","","NaN","#DIV/0!")
+
+pml.training.raw = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", na.strings = naStrings)
+
+pml.testing.raw = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", na.strings = naStrings)
+
+summary(pml.training.raw)
+head(pml.training.raw)
+```
+After looking at the data, we see that there are a lot missing values in the data set. This could become problematic in our training process and there are 2 options: 1) ignore some rows/columns with a lot of missing value 2) imputation of these cols.
+Let's examine the extend of data missing both in terms of columns and rows.  
+```{r missing-data-analysis}
+missingRatioColsRatio = apply(is.na(pml.training.raw), 2, mean)
+sort(missingRatioColsRatio, decreasing = TRUE)
+missingRatioRowRatio = apply(is.na(pml.training.raw), 1, mean)
+sort(missingRatioRowRatio)
+```
+We can see that 
+- overall, there is no complete rows in the dataset.  
+- in terms of columns, some columns are mostly missing: e.g. kurtosis_roll_forearm, max_yaw_forearm and some of the columns have no missing values, e.g. accel_forearm_y, gyros_forearm_x.  
+- In terms of rows, missing value ratio varies more, some rows have 3.75% of columns missing, some have 6.25% of columns missing.  
+
+Clearly, we can drop all the columns that have no data at all.
+```{r handling-missing-data}
+#for features that are completely missing, we can simply remove them
+nonMissingCols = names(missingRatioColsRatio[missingRatioColsRatio<1])
+pml.training.raw = pml.training.raw[,nonMissingCols]
+#convert timestamp to date time
+pml.training.raw$cvtd_timestamp = as.POSIXct(pml.training.raw$cvtd_timestamp, format="%m/%d/%Y %H:%M")
+pml.testing.raw$cvtd_timestamp = as.POSIXct(pml.testing.raw$cvtd_timestamp, format="%m/%d/%Y %H:%M")
+```
+
+
+## Data exploration 
+**Class skewness**
+One good thing to check is how balanced is the response variable, see below
+```{r data-expl-balance}
+table(pml.training.raw$classe)
+```
+We can see that sample data is skewed a bit towards A, but otherwise fairly balanced. 
+
+### Correlations
+First, let's explore how strong these features are correlated 
+```{r data-expl-correlations}
+library(psych)
+numericCols = sapply(pml.training.raw, is.numeric)
+corMatrix = cor(pml.training.raw[,numericCols])
+mat.sort(corMatrix)
+
+findLinearCombos(pml.training.raw)
+```
+We can see that there are a few correlated features, such as accel_belt_y, accel_belt_z, roll_belt and total_accel_belt, but most of these features are not highly correlated. Indicating dimension reduction, such as with PCA, may not be very helpful. 
+
+```{r low-variance-features}
+nearZeroVar(pml.training.raw, saveMetrics = TRUE)
+```
+
+
+
+## Data splitting 
+Since we have enough sample data in training set, we can split training set into validation and training set, let's do 3:1 split between training and validation. Training data will be used for training models, validation used for benchmarking and adjustment of models and testing data for final gauge. 
+```{r data-split-validation}
+set.seed(32455) #for reproduction
+inTrain = createDataPartition(pml.training.raw$classe, p = 3/4, list = FALSE)
+pml.training.data = pml.training.raw[inTrain,]
+pml.validation.data = pml.training.raw[-inTrain,]
+```
+
+## Model fitting, cross validation and testing
+
+We are going to try several models, tune and optimize each model and then compare the results of different models as well as the ensemble of these models, to choose the best one. Since the response variable is categorical variable, we are going to use accuracy as the key metric to evaluate how good a model is. 
+
+### Linear models 
+Starting with model based forecasting, such as linear models below have the advantage of better understanding of the problem and data structure, which helps pave the road for more model fitting later on. 
+Another reason that stats model based fitting makes sense here is that based on the correlation analysis above, we see that most features are not highly correlated, which fits more into assumptions underlying these models. 
+
+Before fitting linear models, a few preprocessing needs to be done, due to some key assumptions of linear analysis: e.g. normality, covariance skewness etc. We also need to take care of missing data, as the linear analysis is sensitive and cannot make much use of those. 
+
+```{r linear-model-preprocess}
+#Handling missing values, all analysis below are sensitive to missing values
+colMissingRatio = apply(is.na(pml.training.data), 2, mean)
+#for linear analysis, if most of the values are missing, the feature won't be helpful, so we can simply filter out these
+cols = names(colMissingRatio[colMissingRatio<0.05])
+predictorCols = setdiff(cols, "classe")
+pml.training.linear.data = pml.training.data[,cols]
+pml.validation.linear.data = pml.validation.data[,cols]
+pml.testing.linear.data = pml.testing.raw[,predictorCols]
+
+#now we can impute since we have very low missing data in these features, imputatin also center and scale data, making analysis easier as well, we also transform these features with BoxCox for normality
+preproc = preProcess(pml.training.linear.data[,predictorCols], method = c("BoxCox", "knnImpute", "pca", "center", "scale"), k = 10)
+pml.training.linear.data  = predict(preproc, pml.training.linear.data)
+pml.testing.linear.data = predict(preproc, pml.testing.linear.data)
+```
+
+Then we can start model fitting
+```{r linear-model-fit, cache=TRUE}
+#Naive Bayesian model
+pml.nb.model = train(classe ~ ., data=pml.training.linear.data, method="nb", trControl = trainControl(method="repeatedcv",number=10, repeats = 10))
+pml.nb.model
+plot(pml.nb.model)
+#we can see that accurary is 92%, pretty high
+
+#Linear Discrimitive Analysis
+pml.lda.model = train(classe ~ ., data=pml.training.linear.data, method="lda", trControl = trainControl(method="repeatedcv",number=10, repeats = 10))
+pml.lda.model
+#we can see that accuracy is 99.9%, which is very high as well
+
+#we also see warnings about colinearity
+```
+
+Check accuracy against testing data, first let's look at Native Baysian Model
+```{r nb-model-accuracy}
+pml.nb.validate.predict = predict(pml.nb.model, pml.validation.linear.data)
+confusionMatrix(pml.nb.validate.predict, pml.validation.linear.data$classe)
+```
+
+Overall accuracy is only 23.6%. 
+
+```{r lda-model-accuracy}
+pml.lda.validate.predict = predict(pml.lda.model, pml.validation.linear.data)
+
+confusionMatrix(pml.lda.validate.predict, pml.validation.linear.data$classe)
+```
+Overall accuracy is only 16.4%, even worse.
+
+
+### Tree models
+
+
+
+
+### Boosting
+
+
+### Neural Network
+
+### Ensembling 
+
+
+### Non-time series analysis
+
+### Time series analysis
+
+## Predictions and error discussion
+
+
+## Conclusion
+
+
+
+
+
+
