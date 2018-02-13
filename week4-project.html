@@ -218,7 +218,29 @@ predict(pml.model.nb, newdata = pml.data.testing.linear)</code></pre>
 </div>
 <div id="tree-based-models" class="section level3">
 <h3>Tree based models</h3>
-<p>Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models, results for tree based models are shown below.</p>
+<p>Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models.</p>
+<pre class="r"><code>trainCART = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = &quot;rpart&quot;,
+        tuneLength = 30,
+        trControl = tc
+    )
+}
+
+trainRF = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = &quot;rf&quot;,
+        trControl = trainControl(
+            method = &quot;repeatedcv&quot;,
+            number = 3
+        )
+    )
+}</code></pre>
+<p>Measurements for tree based models are shown below.</p>
 <table>
 <thead>
 <tr class="header">

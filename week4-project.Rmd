@@ -97,7 +97,32 @@ kable(modelBased)
 ```
 
 ###Tree based models
-Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models, results for tree based models are shown below.  
+Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models. 
+```{r tree-based-model, echo=TRUE, eval=FALSE}
+trainCART = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = "rpart",
+        tuneLength = 30,
+        trControl = tc
+    )
+}
+
+trainRF = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = "rf",
+        trControl = trainControl(
+            method = "repeatedcv",
+            number = 3
+        )
+    )
+}
+```
+
+Measurements for tree based models are shown below.  
 ```{r tree-model-measurements}
 treeBased = data.frame(
     models = c("CART", "Random Forest"),

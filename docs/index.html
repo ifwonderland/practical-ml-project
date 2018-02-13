@@ -125,8 +125,6 @@ $(document).ready(function () {
 </div>
 
 
-<p>The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
-<p>Peer Review Portion Your submission for the Peer Review portion should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to &lt; 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).</p>
 <div id="problem" class="section level2">
 <h2>Problem</h2>
 <p>The key question this analysis to predict how well people performs a particular activity, this analysis uses data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants as training and validation data set to train various models, and eventually use these activity measurements to predict what activity classe/type is performed.</p>
@@ -134,7 +132,7 @@ $(document).ready(function () {
 </div>
 <div id="executive-summary" class="section level2">
 <h2>Executive summary</h2>
-<p>This analysis split raw data inputs into 14718 observations as training data, and 4904 observations as validation data set to train the following models: Native Bayesian model, LDA (Linear Discrimitive Analysis), QDA (Quadratic Discrimptive Analysis), SVM (Support Vector Machine), Decision Tree, Random Forest, Neural Network, Adaboost/Bag, GBM (Gradient Boosting Machine). After guage with validation data set, using accuracy, Kappa and computaitonal cost as main criteria, Random Forest is selected to predict testing data set. And predicted the activity class for testing data set is : B A B A A E D B A A B C B A E E A B B B, with accuracy of 0.9923 and Kappa : 0.9902. More details on data processing, feature selection, model building and error below.</p>
+<p>This analysis split raw data inputs into 14718 observations as training data, and 4904 observations as validation data set to train the following models: Native Bayesian model, LDA (Linear Discrimitive Analysis), QDA (Quadratic Discrimptive Analysis), SVM (Support Vector Machine), Decision Tree, Random Forest, Neural Network, Adaboost/Bag, GBM (Gradient Boosting Machine). After guage with validation data set, using accuracy, Kappa and computaitonal cost as main criteria, <strong>Random Forest</strong> is selected to predict testing data set. And predicted the activity class for testing data set is : B A B A A E D B A A B C B A E E A B B B, with accuracy of 0.9923 and Kappa : 0.9902, with out of sample error &lt; 1%. More details on data processing, feature selection, model building and error below.</p>
 </div>
 <div id="detailed-analysis" class="section level2">
 <h2>Detailed analysis</h2>
@@ -144,6 +142,7 @@ $(document).ready(function () {
 <p>Raw data comes from Human Activity Recognition project <a href="http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har">website</a>, raw data includes 19622 rows and 154 features for training data set and 20 rows and 52 variables as testing data. An overview of raw data reveals that many features have very high missing data ratio, e.g. 98% of kurtosis_roll_belt is missing, this could potentially lead to issues with model training. Two strategies were adopted to mitigate this issue.<br />
 1. Common sense: we know to generalize the model, certain features are not predictive, e.g. user name, X and timestamps.<br />
 2. Testing data features: eventually we need to predict activities based on testing data set, and the features in testing data set provides clue on what features should be used.</p>
+<p>These missing data and near zero variables are handled and transformed via feature selection, details please see source code load-pml-data.R.</p>
 <p>All in all, the following features were selected as predictor features:<br />
 roll_belt, pitch_belt, yaw_belt, total_accel_belt, gyros_belt_x, gyros_belt_y, gyros_belt_z, accel_belt_x, accel_belt_y, accel_belt_z, magnet_belt_x, magnet_belt_y, magnet_belt_z, roll_arm, pitch_arm, yaw_arm, total_accel_arm, gyros_arm_x, gyros_arm_y, gyros_arm_z, accel_arm_x, accel_arm_y, accel_arm_z, magnet_arm_x, magnet_arm_y, magnet_arm_z, roll_dumbbell, pitch_dumbbell, yaw_dumbbell, total_accel_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, accel_dumbbell_z, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, roll_forearm, pitch_forearm, yaw_forearm, total_accel_forearm, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_y, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, magnet_forearm_z</p>
 </div>
@@ -185,25 +184,139 @@ confusionMatrix(
 
 predict(pml.model.nb, newdata = pml.data.testing.linear)</code></pre>
 <p>Measurements and prediction of stats models shown below:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">models</th>
+<th align="left">Accurary</th>
+<th align="left">Kappa</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Native Bayesian</td>
+<td align="left">0.6366</td>
+<td align="left">0.5412</td>
+</tr>
+<tr class="even">
+<td align="left">LDA</td>
+<td align="left">0.5275</td>
+<td align="left">0.4019</td>
+</tr>
+<tr class="odd">
+<td align="left">SVM</td>
+<td align="left">0.7804</td>
+<td align="left">0.7207</td>
+</tr>
+<tr class="even">
+<td align="left">QDA</td>
+<td align="left">0.7412</td>
+<td align="left">0.6762</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="tree-based-models" class="section level3">
 <h3>Tree based models</h3>
-<p>Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models, results for tree based models are shown below.</p>
+<p>Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models.</p>
+<pre class="r"><code>trainCART = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = &quot;rpart&quot;,
+        tuneLength = 30,
+        trControl = tc
+    )
+}
+
+trainRF = function(trainingData) {
+    train(
+        classe ~ .,
+        data = trainingData,
+        method = &quot;rf&quot;,
+        trControl = trainControl(
+            method = &quot;repeatedcv&quot;,
+            number = 3
+        )
+    )
+}</code></pre>
+<p>Measurements for tree based models are shown below.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">models</th>
+<th align="left">Accurary</th>
+<th align="left">Kappa</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">CART</td>
+<td align="left">0.8336</td>
+<td align="left">0.7896</td>
+</tr>
+<tr class="even">
+<td align="left">Random Forest</td>
+<td align="left">0.9923</td>
+<td align="left">0.9902</td>
+</tr>
+</tbody>
+</table>
 <p>As we can see here, accuracy and kappa of Random Forest (boosting of decision tree) is very good.</p>
 </div>
 <div id="neural-network-adaboost-and-gbm" class="section level3">
 <h3>Neural Network, Adaboost and GBM</h3>
 <p>Neural Network, and ensemble methods such as Adaboost and GBM are evaluated as well, with measurements shown below:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">models</th>
+<th align="left">Accurary</th>
+<th align="left">Kappa</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">NN</td>
+<td align="left">0.4144</td>
+<td align="left">0.2718</td>
+</tr>
+<tr class="even">
+<td align="left">Adaboost</td>
+<td align="left">0.4323</td>
+<td align="left">0.2288</td>
+</tr>
+<tr class="odd">
+<td align="left">GBM</td>
+<td align="left">0.9615</td>
+<td align="left">0.9512</td>
+</tr>
+</tbody>
+</table>
 <p>As we can see here, GBM performs really well as well.</p>
 </div>
 <div id="model-selection" class="section level3">
 <h3>Model selection</h3>
 <p>All in all, we can see that Random Forest and GBM are the best models when measured against validation data set, in particular Random Forest has only out of sample error of &lt; 1%, therefore used as the first choice of prediction model. Also used in GBM in this case only to do cross check on prediction results. Predictions are shown below.</p>
-<pre class="r"><code>kable(data.frame(
-    model = c(&quot;Random Forest&quot;, &quot;GBM&quot;),
-    predictions = c(&quot;B A B A A E D B A A B C B A E E A B B B&quot;, &quot;B A B A A E D B A A B C B A E E A B B B&quot;)
-    ))</code></pre>
-<p>As we can see, the predictions are exactly the same, therefore random forest is chosen as final model, and the prediction is B A B A A E D B A A B C B A E E A B B B. With &lt;1% of out of sample error.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">model</th>
+<th align="left">predictions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Random Forest</td>
+<td align="left">B A B A A E D B A A B C B A E E A B B B</td>
+</tr>
+<tr class="even">
+<td align="left">GBM</td>
+<td align="left">B A B A A E D B A A B C B A E E A B B B</td>
+</tr>
+</tbody>
+</table>
+<p>As we can see, the predictions are exactly the same, therefore random forest is chosen as final model, and the prediction is B A B A A E D B A A B C B A E E A B B B. With &lt;1% of out of sample error, and 0.9923 accuracy.</p>
 </div>
 </div>
 
