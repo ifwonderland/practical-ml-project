@@ -5,7 +5,6 @@ naStrings = na.strings = c("NA", "", "NaN", "#DIV/0!")
 loadCleanPmlData = function(type) {
     filename = ifelse(type == "testing", "pml-testing.csv", "pml-training.csv")
     pml.data = read.csv(filename, na.strings = naStrings)
-    overviewData(pml.data)
     pml.data$cvtd_timestamp = as.POSIXct(pml.data$cvtd_timestamp, format =
                                              "%m/%d/%Y %H:%M")
     pml.data[, getNotCompleteMissingColumns(pml.data)]

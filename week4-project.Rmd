@@ -6,25 +6,18 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, results = "hide", cache = TRUE, eval = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache = TRUE, eval = TRUE)
 library(caret)
 library(dplyr)
 ```
-
-The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
-
-Peer Review Portion
-Your submission for the Peer Review portion should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
-
-
 ## Problem
 The key question this analysis to predict how well people performs a particular activity, this analysis uses data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants as training and validation data set to train various models, and eventually use these activity measurements to predict what activity classe/type is performed. 
 
- You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
 
 
 ## Executive summary
-This analysis split raw data inputs into 14718 observations as training data, and 4904 observations as validation data set to train the following models: Native Bayesian model, LDA (Linear Discrimitive Analysis), QDA (Quadratic Discrimptive Analysis), SVM (Support Vector Machine), Decision Tree, Random Forest, Neural Network, Adaboost/Bag, GBM (Gradient Boosting Machine). After guage with validation data set, using accuracy, Kappa and computaitonal cost as main criteria, Random Forest is selected to predict testing data set. And predicted the activity class for testing data set is : B A B A A E D B A A B C B A E E A B B B, with accuracy of 0.9923 and Kappa : 0.9902.
+This analysis split raw data inputs into 14718 observations as training data, and 4904 observations as validation data set to train the following models: Native Bayesian model, LDA (Linear Discrimitive Analysis), QDA (Quadratic Discrimptive Analysis), SVM (Support Vector Machine), Decision Tree, Random Forest, Neural Network, Adaboost/Bag, GBM (Gradient Boosting Machine). After guage with validation data set, using accuracy, Kappa and computaitonal cost as main criteria, **Random Forest** is selected to predict testing data set. And predicted the activity class for testing data set is : B A B A A E D B A A B C B A E E A B B B, with accuracy of 0.9923 and Kappa : 0.9902, with out of sample error < 1%. 
 More details on data processing, feature selection, model building and error below. 
 
 ## Detailed analysis
@@ -35,21 +28,15 @@ Two strategies were adopted to mitigate this issue.
 1. Common sense: we know to generalize the model, certain features are not predictive, e.g. user name, X and timestamps.  
 2. Testing data features: eventually we need to predict activities based on testing data set, and the features in testing data set provides clue on what features should be used. 
 
-```{r data-loading-feature-selection, eval=TRUE}
+These missing data and near zero variables are handled and transformed via feature selection, details please see source code load-pml-data.R.
+
+```{r data-loading-feature-selection}
 #load and some basic cleaning of data
 source("load-pml-data.R")
 pml.data.training.complete = loadCleanPmlData("training")
-overviewData(pml.data.training.complete)
 pml.data.testing = loadCleanPmlData("testing")
-overviewData(pml.data.testing)
-
-getColMissingRatio(pml.data.training.complete)
-
 #Get only predictor features 
 predictorCols = getPredictorFeatures(pml.data.training.complete, pml.data.testing)
-pml.data.training.raw = pml.data.training.complete[, predictorCols]
-pml.data.training.raw$classe = pml.data.training.complete$classe
-pml.data.testing = pml.data.testing[,predictorCols]
 ```
 All in all, the following features were selected as predictor features:  
 `r predictorCols`
@@ -57,7 +44,7 @@ All in all, the following features were selected as predictor features:
 ## Data splitting 
 The training dataset is then split into training data set (75%) and validation data set (25%) for measuring accuracy and cross validation. Testing data set is set aside for final prediction use only.
 
-```{r data-spliting, echo=TRUE}
+```{r data-spliting, echo=TRUE, , eval=FALSE}
 set.seed(32455) #for reproduction
 inTrain = createDataPartition(pml.data.training.raw$classe,
                               p = 3 / 4,
@@ -70,7 +57,7 @@ pml.data.validation = pml.data.training.raw[-inTrain, ]
 ##Model training
 ###Model based 
 Stats models assumes orthongonality and normality, so we need to first do some preprocessing, in this case, we use PCA (for resovling colinearity) and center & scale. 
-```{r linear-data-transformation, echo=TRUE}
+```{r linear-data-transformation, echo=TRUE, eval=FALSE}
 preproc = preProcess(
     select(pml.data.training.linear,-classe),
     method = c("pca", "center", "scale")
@@ -78,7 +65,7 @@ preproc = preProcess(
 ```
 
 The transformed data is used to train Naive Bayesian, LDA, QDA and SVM, one example (NB) shown below: 
-```{r linear-models, echo=TRUE}
+```{r linear-models, echo=TRUE, eval=FALSE}
 pml.model.nb = train(
     classe ~ .,
     data = pml.data.training.linear,
@@ -99,7 +86,7 @@ predict(pml.model.nb, newdata = pml.data.testing.linear)
 ```
 
 Measurements and prediction of stats models shown below:
-```{r stats-model-measurements,results='asis'}
+```{r stats-model-measurements}
 modelBased = data.frame(
     models = c("Native Bayesian", "LDA", "SVM", "QDA"),
     Accurary = c("0.6366", "0.5275", "0.7804", "0.7412"),
@@ -111,7 +98,7 @@ kable(modelBased)
 
 ###Tree based models
 Tree based models does not require assumption on orthonganality, so original training set is used, similar to stats model training, repeated cross valdiation are used when trainig models, results for tree based models are shown below.  
-```{r tree-model-measurements, results='asis'}
+```{r tree-model-measurements}
 treeBased = data.frame(
     models = c("CART", "Random Forest"),
     Accurary = c("0.8336", "0.9923"),
@@ -119,12 +106,14 @@ treeBased = data.frame(
     )
 kable(treeBased)
 ```
+
+
 As we can see here, accuracy and kappa of Random Forest (boosting of decision tree) is very good. 
 
 
 ###Neural Network, Adaboost and GBM
 Neural Network, and ensemble methods such as Adaboost and GBM are evaluated as well, with measurements shown below:
-```{r ensemble-model-measurements, results='asis'}
+```{r ensemble-model-measurements}
 ensembleModels = data.frame(
     models = c("NN", "Adaboost", "GBM"),
     Accurary = c("0.4144", "0.4323","0.9615"),
@@ -132,18 +121,22 @@ ensembleModels = data.frame(
     )
 kable(ensembleModels)
 ```
+
+
 As we can see here, GBM performs really well as well. 
 
 ###Model selection
 All in all, we can see that Random Forest and GBM are the best models when measured against validation data set, in particular Random Forest has only out of sample error of < 1%, therefore used as the first choice of prediction model. Also used in GBM in this case only to do cross check on prediction results. Predictions are shown below.
 
-```{r predictions, echo=TRUE}
+```{r predictions}
 kable(data.frame(
     model = c("Random Forest", "GBM"),
     predictions = c("B A B A A E D B A A B C B A E E A B B B", "B A B A A E D B A A B C B A E E A B B B")
     ))
 ```
-As we can see, the predictions are exactly the same, therefore random forest is chosen as final model, and the prediction is B A B A A E D B A A B C B A E E A B B B. With <1% of out of sample error. 
+
+
+As we can see, the predictions are exactly the same, therefore random forest is chosen as final model, and the prediction is B A B A A E D B A A B C B A E E A B B B. With <1% of out of sample error, and 0.9923 accuracy.
 
 
 
